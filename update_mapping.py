@@ -18,6 +18,8 @@ class ElasticSearchUpdateMapping(object):
                 logging.error('Mapping comparison failed')
                 return False
             return True
+        # by default
+        return True
 
     def update_mapping(self, client, alias, mapping, comparing_mapping=False, comparison_level=0, check='soft'):
         '''
