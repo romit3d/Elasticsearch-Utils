@@ -1,5 +1,8 @@
 from elasticsearch import Elasticsearch, helpers
 import time
+import logging
+FORMAT = '%(asctime)-15s Line: %(lineno)s, %(levelname)s: %(message)s'
+logging.basicConfig(format=FORMAT)
 
 
 class ElasticSearchUpdateMapping(object):
@@ -14,38 +17,48 @@ class ElasticSearchUpdateMapping(object):
             self.mapping_cmp(current_mapping, mapping)
         aliases = client.indices.get_alias(index=alias)
         if len(aliases.keys()) > 1:
-            raise Exception('Multiple indices associated with the alias. Aborting..\n'
-                            'Indices Associated: %s' % aliases.keys())
+            logging.error('Multiple indices associated with the alias. Aborting...')
+            logging.error('Indices Associated: %s' % aliases.keys())
+            return {'Message': 'Update failed'}
         if alias in aliases.keys():
             new_index = alias + '_' + str(int(time.time()))
             try:
                 client.indices.create(index=new_index, body=mapping, ignore=[400, 404])
             except Exception as e:
-                raise Exception('Index creation failed. Message: %s' % e.message)
+                logging.warning('Index creation failed')
+                logging.error(e)
+                return {'Message': 'Update failed'}
             try:
                 helpers.reindex(client=client, target_index=new_index, source_index=alias, target_client=client)
             except Exception as e:
                 client.indices.delete(index=new_index)
-                raise Exception('Reindexing failed. Moving back to old index. Message: %s' % e.message)
+                logging.warning('Reindexing failed')
+                logging.error(e)
+                return {'Message': 'Update failed'}
             client.indices.delete(index=alias)
             try:
                 client.indices.put_alias(index=new_index, name=alias)
-                return True
+                return {'Message': 'Update successful'}
             except Exception as e:
-                raise Exception('Alias creation failed. Data backup in index: %s. Message: %s' % (new_index, e.message))
+                logging.warning('Alias creation failed. Data backup in index: %s' % new_index)
+                logging.error(e)
+                return {'Message': 'Update failed'}
         else:
             new_index = alias + '_' + str(int(time.time()))
             current_index = aliases.keys()[0]
             try:
                 client.indices.create(index=new_index, body=mapping, ignore=[400, 404])
             except Exception as e:
-                raise Exception('Index creation failed. Message: %s' % e.message)
+                logging.warning('Index creation failed')
+                logging.error(e)
+                return {'Message': 'Update failed'}
             try:
                 helpers.reindex(client=client, target_index=new_index, source_index=alias, target_client=client)
             except Exception as e:
                 client.indices.delete(index=new_index)
-                raise Exception('Reindexing failed. Moving back to old index. Message: %s' % e.message)
-            client.indices.delete_alias(index=current_index)
+                logging.warning('Reindexing failed')
+                logging.error(e)
+                return {'Message': 'Update failed'}
+            client.indices.delete_alias(index=current_index, name=alias)
             client.indices.put_alias(index=new_index, name=alias)
-            return True
-
+            return {'Message': 'Update successful'}
