@@ -92,8 +92,8 @@ class ElasticSearchUpdateMapping(object):
             logging.warning('doc_types missing in new mapping')
             return False
         for doc_type in doc_types_current_mapping:
-            if not self.x_in_y(cuerrent_mapping['mappings'][doc_type]['properties'],
-                        new_mapping['mappings'][doc_type]['properties']):
+            if not self.x_in_y(set(cuerrent_mapping['mappings'][doc_type]['properties']),
+                        set(new_mapping['mappings'][doc_type]['properties'])):
                 logging.warning('fields missing in new mapping')
                 return False
         return True
