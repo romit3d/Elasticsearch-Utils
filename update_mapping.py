@@ -13,7 +13,7 @@ class ElasticSearchUpdateMapping(object):
         #TODO mapping comparison other levels
         if comparison_level == 0:
             # Checks for all the keys
-            res = self.key_comparison(current_mapping.keys()[0], new_mapping)
+            res = self.key_comparison(current_mapping[current_mapping.keys()[0]], new_mapping)
             if check == 'hard' and not res:
                 logging.error('Mapping comparison failed')
                 return False
@@ -94,7 +94,9 @@ class ElasticSearchUpdateMapping(object):
         for doc_type in doc_types_current_mapping:
             if not self.x_in_y(set(cuerrent_mapping['mappings'][doc_type]['properties']),
                         set(new_mapping['mappings'][doc_type]['properties'])):
-                logging.warning('fields missing in new mapping')
+                logging.warning('%s missing in new mapping'
+                                % ','.join(set(cuerrent_mapping['mappings'][doc_type]['properties']) -
+                                           set(new_mapping['mappings'][doc_type]['properties'])))
                 return False
         return True
 
